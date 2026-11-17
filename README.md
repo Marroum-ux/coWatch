@@ -1,4 +1,4 @@
-# Visio-Partage
+# coWatch
 
 Plateforme web permettant à plusieurs utilisateurs de regarder des vidéos ensemble en temps réel, de discuter via un chat et de gérer une playlist collaborative.
 
