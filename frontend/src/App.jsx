@@ -1,68 +1,135 @@
+import { useEffect, useState } from "react";
+import socket from "./socket";
+import Chat from "./components/Chat";
+import Participants from "./components/Participants";
 
-import { useState, useEffect } from 'react'
-import axios from "axios"
-import './App.css'
 
 function App() {
-  const [message, setMessage] = useState("Connexion au serveur...")
-  const [salon, setSalon] = useState(null)
-  const [erreur, setErreur] = useState("")
 
-  useEffect(() => {
-    axios
-      .get("http://localhost:3000/api/health")
-      .then((response) => {
-        setMessage(response.data.message)
-      })
-      .catch((error) => {
-        console.error(error)
-        setMessage("Connexion impossible au serveur.")
-      })
-  }, [])
+  const [participants, setParticipants] = useState([]);
 
-  async function creerSalon() {
-    setErreur("")
-    try {
-      const response = await axios.post(
-        "http://localhost:3000/api/salons"
-      )
-      setSalon(response.data.salon)
-    } catch (error) {
-      console.error(error)
-      setErreur("Impossible de créer le salon.")
-    }
-  }
+  const [pseudo, setPseudo] = useState("");
 
-  return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center">
-      <h1 className="text-5xl font-bold text-pink-400 mb-6">
-        coWatch
-      </h1>
+  const [message, setMessage] = useState("");
+const [messages, setMessages] = useState([]);
 
-      <p className="text-xl text-white mb-8">{message}</p>
 
-      <button
-        onClick={creerSalon}
-        className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-lg"
-      >
-        Créer un salon
-      </button>
+  const [salonId, setSalonId] = useState("");
+  const [status, setStatus] = useState("Disconnected");
 
-      {salon && (
-        <div className="mt-8 text-center text-white">
-          <h2 className="text-2xl font-bold mb-3">
-            Salon créé !
-          </h2>
-          <p>Identifiant : {salon.idSalle}</p>
-          <p>Code d'invitation : {salon.codeInvitation}</p>
-        </div>
-      )}
+  function envoyerMessage() {
+  if (!message.trim()) return;
 
-      {erreur && (
-        <p className="text-red-400 mt-4">{erreur}</p>
-      )}
-    </div>
-  )
+  socket.emit("chat:envoyer", {
+    message: message,
+  });
+
+  setMessage("");
 }
 
-export default App
+  useEffect(() => {
+   function onParticipantsListe(participants) {
+  setParticipants(participants);
+}
+
+socket.on("participant:liste", onParticipantsListe);
+
+    function onMessage(data) {
+  setMessages((previous) => [...previous, data]);
+}
+
+socket.on("chat:message", onMessage);
+    function onConnect() {
+      setStatus("Connected");
+    }
+
+    function onJoined(data) {
+      setStatus(`Joined salon: ${data.id_salle}`);
+    }
+
+    function onError(message) {
+      setStatus(`Error: ${message}`);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("salon:rejoint", onJoined);
+    socket.on("salon:erreur", onError);
+
+    socket.connect();
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("salon:rejoint", onJoined);
+      socket.off("salon:erreur", onError);
+      socket.off("chat:message", onMessage);
+      socket.off("participant:liste", onParticipantsListe);
+      socket.disconnect();
+    };
+  }, []);
+
+
+
+ function rejoindreSalon() {
+  if (!pseudo.trim() || !salonId.trim()) {
+    alert("Veuillez entrer un pseudonyme et un salon");
+    return;
+  }
+
+  socket.emit("salon:rejoindre", {
+    id_salle: salonId.trim(),
+    pseudo: pseudo.trim(),
+  });
+}
+
+
+return (
+  <div className="p-10">
+
+    {/* Participants */}
+   <Participants participants={participants} />
+
+    {/* Rejoindre un salon */}
+    <h1 className="text-3xl font-bold mt-6">
+      Socket.IO Test
+    </h1>
+
+    <p className="mt-4">{status}</p>
+
+    <div className="flex gap-2 mt-4">
+      <input
+        className="border p-2"
+        placeholder="Salon ID"
+        value={salonId}
+        onChange={(e) => setSalonId(e.target.value)}
+      />
+
+      <input
+        className="border p-2"
+        placeholder="Votre pseudonyme"
+        value={pseudo}
+        onChange={(e) => setPseudo(e.target.value)}
+        maxLength={50}
+      />
+
+      <button
+        onClick={rejoindreSalon}
+        className="bg-pink-500 text-white p-2 rounded"
+      >
+        Rejoindre
+      </button>
+    </div>
+
+    {/* Chat */}
+    <Chat
+      messages={messages}
+      message={message}
+      setMessage={setMessage}
+      envoyerMessage={envoyerMessage}
+    />
+
+  </div>
+);
+
+}
+
+export default App;

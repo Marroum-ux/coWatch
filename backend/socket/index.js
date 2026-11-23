@@ -1,0 +1,21 @@
+
+import { Server } from "socket.io";
+import { registerSalonSocket } from "./salonSocket.js";
+import { registerChatSocket } from "./chatSocket.js";
+
+export function initializeSocket(server) {
+  const io = new Server(server, {
+    cors: {
+      origin: "http://localhost:5173",
+    },
+  });
+
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
+
+    registerSalonSocket(io, socket);
+    registerChatSocket(io, socket);
+  });
+
+  return io;
+}
