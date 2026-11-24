@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import axios from "axios"
 import './App.css'
+import LecteurVideo from "./components/LecteurVideo"
 
 function App() {
   const [message, setMessage] = useState("Connexion au serveur...")
@@ -61,7 +62,11 @@ function App() {
       {erreur && (
         <p className="text-red-400 mt-4">{erreur}</p>
       )}
+      <div className="mt-8">
+        <LecteurVideo videoId="NR7IzJ6cNCI" />
+      </div>
     </div>
+    
   )
 }
 
