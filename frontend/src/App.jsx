@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import axios from "axios"
+import socket from "./services/socket"
 import './App.css'
 
 function App() {
@@ -8,6 +9,7 @@ function App() {
   const [salon, setSalon] = useState(null)
   const [erreur, setErreur] = useState("")
 
+  // Vérifier la connexion au backend avec Axios
   useEffect(() => {
     axios
       .get("http://localhost:3000/api/health")
@@ -20,12 +22,34 @@ function App() {
       })
   }, [])
 
+  // Connexion Socket.IO
+  useEffect(() => {
+    socket.connect()
+
+    socket.on("connect", () => {
+      console.log("Connecté au serveur Socket.IO :", socket.id)
+    })
+
+    socket.on("disconnect", () => {
+      console.log("Déconnecté du serveur Socket.IO")
+    })
+
+    return () => {
+      socket.off("connect")
+      socket.off("disconnect")
+      socket.disconnect()
+    }
+  }, [])
+
+  // Créer un salon
   async function creerSalon() {
     setErreur("")
+
     try {
       const response = await axios.post(
         "http://localhost:3000/api/salons"
       )
+
       setSalon(response.data.salon)
     } catch (error) {
       console.error(error)
